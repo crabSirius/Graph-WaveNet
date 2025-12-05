@@ -10,13 +10,15 @@ This is the original pytorch implementation of Graph WaveNet in the following pa
 </p>
 
 ## Requirements
-- python 3
+- python 3.6
+- torch 1.10.2
 - see `requirements.txt`
 
 
 ## Data Preparation
 
 ### Step1: Download METR-LA and PEMS-BAY data from [Google Drive](https://drive.google.com/open?id=10FOTa6HXPqX8Pf5WRoRwcFnW9BrNZEIX) or [Baidu Yun](https://pan.baidu.com/s/14Yy9isAIZYdU__OYEQGa_g) links provided by [DCRNN](https://github.com/liyaguang/DCRNN).
+下载DCRNN的sensor_graph
 
 ### Step2: Process raw data 
 
