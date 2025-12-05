@@ -2,9 +2,10 @@ import torch
 import numpy as np
 import argparse
 import time
+import os
 import util
-import matplotlib.pyplot as plt
 from engine import trainer
+from torch.utils.tensorboard import SummaryWriter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--device',type=str,default='cuda:3',help='')
@@ -27,7 +28,7 @@ parser.add_argument('--epochs',type=int,default=100,help='')
 parser.add_argument('--print_every',type=int,default=50,help='')
 #parser.add_argument('--seed',type=int,default=99,help='random seed')
 parser.add_argument('--save',type=str,default='./garage/metr',help='save path')
-parser.add_argument('--expid',type=int,default=1,help='experiment id')
+parser.add_argument('--expid',type=str,default='1',help='experiment id')
 
 args = parser.parse_args()
 
@@ -39,6 +40,7 @@ def main():
     #torch.manual_seed(args.seed)
     #np.random.seed(args.seed)
     #load data
+    
     device = torch.device(args.device)
     sensor_ids, sensor_id_to_ind, adj_mx = util.load_adj(args.adjdata,args.adjtype)
     dataloader = util.load_dataset(args.data, args.batch_size, args.batch_size, args.batch_size)
@@ -61,7 +63,10 @@ def main():
                          args.learning_rate, args.weight_decay, device, supports, args.gcn_bool, args.addaptadj,
                          adjinit)
 
-
+    # 创建 TensorBoard writer
+    log_dir = os.path.join('runs', f'exp_{args.expid}')
+    writer = SummaryWriter(log_dir=log_dir)
+    print(f"TensorBoard logs will be saved to: {log_dir}")
     print("start training...",flush=True)
     his_loss =[]
     val_time = []
@@ -95,7 +100,6 @@ def main():
         valid_mape = []
         valid_rmse = []
 
-
         s1 = time.time()
         for iter, (x, y) in enumerate(dataloader['val_loader'].get_iterator()):
             testx = torch.Tensor(x).to(device)
@@ -121,6 +125,20 @@ def main():
 
         log = 'Epoch: {:03d}, Train Loss: {:.4f}, Train MAPE: {:.4f}, Train RMSE: {:.4f}, Valid Loss: {:.4f}, Valid MAPE: {:.4f}, Valid RMSE: {:.4f}, Training Time: {:.4f}/epoch'
         print(log.format(i, mtrain_loss, mtrain_mape, mtrain_rmse, mvalid_loss, mvalid_mape, mvalid_rmse, (t2 - t1)),flush=True)
+        
+        # 记录到 TensorBoard
+        writer.add_scalar('Train/Loss', mtrain_loss, i)
+        writer.add_scalar('Train/MAPE', mtrain_mape, i)
+        writer.add_scalar('Train/RMSE', mtrain_rmse, i)
+        writer.add_scalar('Valid/Loss', mvalid_loss, i)
+        writer.add_scalar('Valid/MAPE', mvalid_mape, i)
+        writer.add_scalar('Valid/RMSE', mvalid_rmse, i)
+        writer.add_scalar('Time/Train_Time', t2 - t1, i)
+        writer.add_scalar('Time/Val_Time', s2 - s1, i)
+        # 记录学习率
+        current_lr = engine.optimizer.param_groups[0]['lr']
+        writer.add_scalar('Learning_Rate', current_lr, i)
+        
         torch.save(engine.model.state_dict(), args.save+"_epoch_"+str(i)+"_"+str(round(mvalid_loss,2))+".pth")
     print("Average Training Time: {:.4f} secs/epoch".format(np.mean(train_time)))
     print("Average Inference Time: {:.4f} secs".format(np.mean(val_time)))
@@ -161,10 +179,25 @@ def main():
         amae.append(metrics[0])
         amape.append(metrics[1])
         armse.append(metrics[2])
+        # 记录每个时间步的测试指标
+        writer.add_scalar('Test/MAE', metrics[0], i+1)
+        writer.add_scalar('Test/MAPE', metrics[1], i+1)
+        writer.add_scalar('Test/RMSE', metrics[2], i+1)
 
     log = 'On average over 12 horizons, Test MAE: {:.4f}, Test MAPE: {:.4f}, Test RMSE: {:.4f}'
     print(log.format(np.mean(amae),np.mean(amape),np.mean(armse)))
+    # 记录平均测试指标
+    writer.add_scalar('Test/Average_MAE', np.mean(amae), 0)
+    writer.add_scalar('Test/Average_MAPE', np.mean(amape), 0)
+    writer.add_scalar('Test/Average_RMSE', np.mean(armse), 0)
+    writer.add_scalar('Best_Model/Valid_Loss', his_loss[bestid], 0)
+    writer.add_scalar('Best_Model/Epoch', bestid+1, 0)
+    
     torch.save(engine.model.state_dict(), args.save+"_exp"+str(args.expid)+"_best_"+str(round(his_loss[bestid],2))+".pth")
+    
+    # 关闭 TensorBoard writer
+    writer.close()
+    print(f"TensorBoard logs saved to: {log_dir}")
 
 
 
