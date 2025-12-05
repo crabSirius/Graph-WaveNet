@@ -25,4 +25,5 @@ data
 *.log
 
 garage/
+runs/
 
