@@ -10,10 +10,21 @@ This is the original pytorch implementation of Graph WaveNet in the following pa
 </p>
 
 ## Requirements
-- python 3.6
-- torch 1.10.2
+- python 3
 - see `requirements.txt`
 
+### 具体环境
+- Python 3.12.9
+- torch                         2.6.0
+- torchvision                   0.21.0
+
+## 代码修改
+为了适配torch版本，将model.py的Conv1d 修改为Conv2d[https://github.com/nnzhan/Graph-WaveNet/issues/34#issuecomment-2008730447]
+
+wkq-wukaiqi,mentioned this on Mar 28, 2024:
+
+Conv1d: Expected 2D (unbatched) or 3D (batched) input to conv1d 
+lwm412/STFGNN-Pytorch#2
 
 ## Data Preparation
 
@@ -25,6 +36,7 @@ This is the original pytorch implementation of Graph WaveNet in the following pa
 ```
 # Create data directories
 mkdir -p data/{METR-LA,PEMS-BAY}
+mkdir garage
 
 # METR-LA
 python generate_training_data.py --output_dir=data/METR-LA --traffic_df_filename=data/metr-la.h5
