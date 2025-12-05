@@ -24,3 +24,5 @@ dist/
 data
 *.log
 
+garage/
+
