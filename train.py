@@ -100,6 +100,10 @@ def main():
         valid_mape = []
         valid_rmse = []
 
+        # 安全创建args.save文件夹
+        if not os.path.exists(args.save):
+            os.makedirs(args.save)
+
         s1 = time.time()
         for iter, (x, y) in enumerate(dataloader['val_loader'].get_iterator()):
             testx = torch.Tensor(x).to(device)
